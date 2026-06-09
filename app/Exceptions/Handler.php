@@ -5,6 +5,7 @@ namespace App\Exceptions;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -36,7 +37,10 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $e)
     {
-        // Handle validation exceptions
+        if (!$request->expectsJson() && !$request->is('api/*')) {
+            return parent::render($request, $e);
+        }
+
         if ($e instanceof ValidationException) {
             return response()->json([
                 'status' => 'error',
@@ -45,7 +49,6 @@ class Handler extends ExceptionHandler
             ], 422);
         }
 
-        // Handle not found exceptions
         if ($e instanceof NotFoundHttpException) {
             return response()->json([
                 'status' => 'error',
@@ -54,7 +57,6 @@ class Handler extends ExceptionHandler
             ], 404);
         }
 
-        // Handle authentication exceptions
         if ($e instanceof AuthenticationException) {
             return response()->json([
                 'status' => 'error',
@@ -63,7 +65,14 @@ class Handler extends ExceptionHandler
             ], 401);
         }
 
-        // Default error response
+        if ($e instanceof MethodNotAllowedHttpException) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Metode HTTP tidak diizinkan untuk endpoint ini.',
+                'data' => null,
+            ], 405);
+        }
+
         return response()->json([
             'status' => 'error',
             'message' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server.',

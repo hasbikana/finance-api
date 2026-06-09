@@ -14,6 +14,8 @@ class TransactionResource extends JsonResource
             'user_id' => $this->user_id,
             'category_id' => $this->category_id,
             'category_name' => $this->category?->name,
+            'wallet_id' => $this->wallet_id,
+            'wallet_name' => $this->wallet?->name,
             'type' => $this->type,
             'amount' => (int) $this->amount,
             'description' => $this->description,

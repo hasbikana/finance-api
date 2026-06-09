@@ -2,59 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
+use App\Services\DashboardService;
+use App\Services\TransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        protected DashboardService $service,
+        protected TransactionService $transactionService
+    ) {}
+
     public function summary(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-
-        $totalIncome = Transaction::withTrashed()
-            ->where('user_id', $userId)
-            ->where('type', 'income')
-            ->sum('amount');
-
-        $totalExpense = Transaction::withTrashed()
-            ->where('user_id', $userId)
-            ->where('type', 'expense')
-            ->sum('amount');
-
-        $balance = $totalIncome - $totalExpense;
-
-        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
-        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
-
-        $thisMonthIncome = Transaction::withTrashed()
-            ->where('user_id', $userId)
-            ->where('type', 'income')
-            ->whereBetween('date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-
-        $thisMonthExpense = Transaction::withTrashed()
-            ->where('user_id', $userId)
-            ->where('type', 'expense')
-            ->whereBetween('date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-
-        $transactionCount = Transaction::where('user_id', $userId)->count();
+        $summary = $this->service->getSummary($request->user()->id);
+        $recentTransactions = $this->service->getRecentTransactions($request->user()->id, 5);
+        $monthlyTrend = $this->service->getMonthlyTrend($request->user()->id, 6);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Data dashboard berhasil diambil.',
-            'data' => [
-                'total_income' => (int) $totalIncome,
-                'total_expense' => (int) $totalExpense,
-                'balance' => (int) $balance,
-                'this_month_income' => (int) $thisMonthIncome,
-                'this_month_expense' => (int) $thisMonthExpense,
-                'this_month_balance' => (int) ($thisMonthIncome - $thisMonthExpense),
-                'transaction_count' => (int) $transactionCount,
-                'current_month' => Carbon::now()->format('F Y'),
-            ],
+            'data' => array_merge($summary, [
+                'recent_transactions' => \App\Http\Resources\TransactionResource::collection($recentTransactions),
+                'monthly_trend' => $monthlyTrend,
+                'transaction_count' => \App\Models\Transaction::where('user_id', $request->user()->id)->count(),
+            ]),
         ], 200);
     }
 }

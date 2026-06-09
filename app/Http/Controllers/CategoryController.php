@@ -4,20 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoryRequest;
 use App\Http\Resources\CategoryResource;
-use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    /**
-     * Get all categories for authenticated user
-     */
+    public function __construct(
+        protected CategoryService $service
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $categories = Category::where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($request->has('search')) {
+            $categories = $this->service->search($request->user()->id, $request->search);
+        } else {
+            $categories = $this->service->getAll($request->user()->id);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -26,15 +29,9 @@ class CategoryController extends Controller
         ], 200);
     }
 
-    /**
-     * Create new category
-     */
     public function store(CategoryRequest $request): JsonResponse
     {
-        $category = Category::create([
-            'name' => $request->name,
-            'user_id' => $request->user()->id,
-        ]);
+        $category = $this->service->create($request->user()->id, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -43,14 +40,9 @@ class CategoryController extends Controller
         ], 201);
     }
 
-    /**
-     * Get single category
-     */
     public function show(Request $request, int $id): JsonResponse
     {
-        $category = Category::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $category = $this->service->getById($id, $request->user()->id);
 
         if (!$category) {
             return response()->json([
@@ -67,14 +59,9 @@ class CategoryController extends Controller
         ], 200);
     }
 
-    /**
-     * Update category
-     */
     public function update(CategoryRequest $request, int $id): JsonResponse
     {
-        $category = Category::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $category = $this->service->getById($id, $request->user()->id);
 
         if (!$category) {
             return response()->json([
@@ -84,9 +71,7 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        $category->update([
-            'name' => $request->name,
-        ]);
+        $category = $this->service->update($category, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -95,14 +80,9 @@ class CategoryController extends Controller
         ], 200);
     }
 
-    /**
-     * Delete category
-     */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $category = Category::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $category = $this->service->getById($id, $request->user()->id);
 
         if (!$category) {
             return response()->json([
@@ -112,7 +92,7 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        $category->delete();
+        $this->service->delete($category);
 
         return response()->json([
             'status' => 'success',

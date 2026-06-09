@@ -15,6 +15,7 @@ class TransactionRequest extends FormRequest
     {
         return [
             'category_id' => ['required', 'integer'],
+            'wallet_id' => ['nullable', 'integer'],
             'type' => ['required', 'in:income,expense'],
             'amount' => ['required', 'integer', 'min:1'],
             'date' => ['required', 'date', 'date_format:Y-m-d'],

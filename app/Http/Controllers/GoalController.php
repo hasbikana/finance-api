@@ -4,25 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\GoalRequest;
 use App\Http\Resources\GoalResource;
-use App\Models\Goal;
+use App\Services\GoalService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class GoalController extends Controller
 {
-    /**
-     * Get all goals for authenticated user
-     */
+    public function __construct(
+        protected GoalService $service,
+        protected NotificationService $notificationService
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $query = Goal::where('user_id', $request->user()->id);
-
-        // Filter by status
-        if ($request->has('status') && in_array($request->status, ['active', 'completed', 'cancelled'])) {
-            $query->where('status', $request->status);
-        }
-
-        $goals = $query->orderBy('created_at', 'desc')->get();
+        $status = $request->get('status');
+        $goals = $this->service->getAll($request->user()->id, $status);
 
         return response()->json([
             'status' => 'success',
@@ -31,18 +28,9 @@ class GoalController extends Controller
         ], 200);
     }
 
-    /**
-     * Create new goal
-     */
     public function store(GoalRequest $request): JsonResponse
     {
-        $goal = Goal::create([
-            'user_id' => $request->user()->id,
-            'name' => $request->name,
-            'target_amount' => $request->target_amount,
-            'target_date' => $request->target_date,
-            'description' => $request->description,
-        ]);
+        $goal = $this->service->create($request->user()->id, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -51,14 +39,9 @@ class GoalController extends Controller
         ], 201);
     }
 
-    /**
-     * Get single goal
-     */
     public function show(Request $request, int $id): JsonResponse
     {
-        $goal = Goal::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $goal = $this->service->getById($id, $request->user()->id);
 
         if (!$goal) {
             return response()->json([
@@ -75,14 +58,9 @@ class GoalController extends Controller
         ], 200);
     }
 
-    /**
-     * Update goal
-     */
     public function update(GoalRequest $request, int $id): JsonResponse
     {
-        $goal = Goal::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $goal = $this->service->getById($id, $request->user()->id);
 
         if (!$goal) {
             return response()->json([
@@ -92,12 +70,7 @@ class GoalController extends Controller
             ], 404);
         }
 
-        $goal->update([
-            'name' => $request->name,
-            'target_amount' => $request->target_amount,
-            'target_date' => $request->target_date,
-            'description' => $request->description,
-        ]);
+        $goal = $this->service->update($goal, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -106,18 +79,11 @@ class GoalController extends Controller
         ], 200);
     }
 
-    /**
-     * Add savings to goal
-     */
     public function addSavings(Request $request, int $id): JsonResponse
     {
-        $request->validate([
-            'amount' => ['required', 'integer', 'min:1'],
-        ]);
+        $request->validate(['amount' => ['required', 'integer', 'min:1']]);
 
-        $goal = Goal::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $goal = $this->service->getById($id, $request->user()->id);
 
         if (!$goal) {
             return response()->json([
@@ -135,14 +101,11 @@ class GoalController extends Controller
             ], 422);
         }
 
-        $goal->current_amount += $request->amount;
-        
-        // Auto-complete if target reached
-        if ($goal->current_amount >= $goal->target_amount) {
-            $goal->status = 'completed';
-        }
+        $goal = $this->service->addSavings($goal, $request->amount);
 
-        $goal->save();
+        if ($goal->status === 'completed') {
+            $this->notificationService->createGoalReached($request->user()->id, $goal);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -151,14 +114,9 @@ class GoalController extends Controller
         ], 200);
     }
 
-    /**
-     * Delete goal
-     */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $goal = Goal::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $goal = $this->service->getById($id, $request->user()->id);
 
         if (!$goal) {
             return response()->json([
@@ -168,7 +126,7 @@ class GoalController extends Controller
             ], 404);
         }
 
-        $goal->delete();
+        $this->service->delete($goal);
 
         return response()->json([
             'status' => 'success',

@@ -1,11 +1,99 @@
-@import 'tailwindcss';
+:root {
+    --bs-primary: #0F766E;
+    --bs-primary-rgb: 15, 118, 110;
+    --bs-secondary: #14B8A6;
+    --bs-accent: #22C55E;
+}
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+.bg-primary { background-color: #0F766E !important; }
+.bg-secondary { background-color: #14B8A6 !important; }
+.bg-accent { background-color: #22C55E !important; }
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+.text-primary { color: #0F766E !important; }
+.text-secondary { color: #14B8A6 !important; }
+.text-accent { color: #22C55E !important; }
+
+.btn-primary { background-color: #0F766E; border-color: #0F766E; }
+.btn-primary:hover, .btn-primary:focus { background-color: #0c5f58; border-color: #0c5f58; }
+
+.btn-secondary-custom { background-color: #14B8A6; border-color: #14B8A6; color: #fff; }
+.btn-secondary-custom:hover { background-color: #109a8a; border-color: #109a8a; color: #fff; }
+
+.btn-accent { background-color: #22C55E; border-color: #22C55E; color: #fff; }
+.btn-accent:hover { background-color: #1ca14d; border-color: #1ca14d; color: #fff; }
+
+.btn-outline-primary { color: #0F766E; border-color: #0F766E; }
+.btn-outline-primary:hover { background-color: #0F766E; border-color: #0F766E; }
+
+.card-stat {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    transition: transform .2s;
+}
+
+.card-stat:hover {
+    transform: translateY(-2px);
+}
+
+.circular-chart {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.2);
+    border-radius: 4px;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+}
+
+.page-item.active .page-link {
+    background-color: #0F766E;
+    border-color: #0F766E;
+}
+
+.page-link {
+    color: #0F766E;
+}
+
+.page-link:hover {
+    color: #0c5f58;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #14B8A6;
+    box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+}
+
+.btn-check:checked + .btn-outline-danger {
+    background-color: #ef4444;
+    border-color: #ef4444;
+}
+
+.btn-check:checked + .btn-outline-success {
+    background-color: #22C55E;
+    border-color: #22C55E;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 4px 8px;
 }

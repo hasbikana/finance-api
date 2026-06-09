@@ -4,51 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TransactionRequest;
 use App\Http\Resources\TransactionResource;
-use App\Models\Category;
-use App\Models\Transaction;
+use App\Services\TransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
-    /**
-     * Get all transactions for authenticated user with filters
-     */
+    public function __construct(
+        protected TransactionService $service
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $query = Transaction::where('user_id', $request->user()->id)
-            ->with('category');
-
-        // Filter by type
-        if ($request->has('type') && in_array($request->type, ['income', 'expense'])) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by date range
-        if ($request->has('start_date')) {
-            $query->where('date', '>=', $request->start_date);
-        }
-
-        if ($request->has('end_date')) {
-            $query->where('date', '<=', $request->end_date);
-        }
-
-        // Search by description
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                  ->orWhereHas('category', function ($cq) use ($search) {
-                      $cq->where('name', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        // Pagination
+        $filters = $request->only(['type', 'category_id', 'wallet_id', 'start_date', 'end_date', 'search']);
         $perPage = $request->get('per_page', 50);
-        $transactions = $query->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+
+        $transactions = $this->service->getFiltered($request->user()->id, $filters, $perPage);
 
         return response()->json([
             'status' => 'success',
@@ -63,34 +34,9 @@ class TransactionController extends Controller
         ], 200);
     }
 
-    /**
-     * Create new transaction
-     */
     public function store(TransactionRequest $request): JsonResponse
     {
-        // Validate category belongs to user
-        $category = Category::where('id', $request->category_id)
-            ->where('user_id', $request->user()->id)
-            ->first();
-
-        if (!$category) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Kategori tidak ditemukan atau bukan milik Anda.',
-                'data' => null,
-            ], 422);
-        }
-
-        $transaction = Transaction::create([
-            'user_id' => $request->user()->id,
-            'category_id' => $request->category_id,
-            'type' => $request->type,
-            'amount' => $request->amount,
-            'description' => $request->description,
-            'date' => $request->date,
-        ]);
-
-        $transaction->load('category');
+        $transaction = $this->service->create($request->user()->id, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -99,15 +45,9 @@ class TransactionController extends Controller
         ], 201);
     }
 
-    /**
-     * Get single transaction
-     */
     public function show(Request $request, int $id): JsonResponse
     {
-        $transaction = Transaction::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->with('category')
-            ->first();
+        $transaction = $this->service->getById($id, $request->user()->id);
 
         if (!$transaction) {
             return response()->json([
@@ -124,14 +64,9 @@ class TransactionController extends Controller
         ], 200);
     }
 
-    /**
-     * Update transaction
-     */
     public function update(TransactionRequest $request, int $id): JsonResponse
     {
-        $transaction = Transaction::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $transaction = $this->service->getById($id, $request->user()->id);
 
         if (!$transaction) {
             return response()->json([
@@ -141,28 +76,7 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        // Validate category belongs to user
-        $category = Category::where('id', $request->category_id)
-            ->where('user_id', $request->user()->id)
-            ->first();
-
-        if (!$category) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Kategori tidak ditemukan atau bukan milik Anda.',
-                'data' => null,
-            ], 422);
-        }
-
-        $transaction->update([
-            'category_id' => $request->category_id,
-            'type' => $request->type,
-            'amount' => $request->amount,
-            'description' => $request->description,
-            'date' => $request->date,
-        ]);
-
-        $transaction->load('category');
+        $transaction = $this->service->update($transaction, $request->validated());
 
         return response()->json([
             'status' => 'success',
@@ -171,14 +85,9 @@ class TransactionController extends Controller
         ], 200);
     }
 
-    /**
-     * Delete transaction
-     */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $transaction = Transaction::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $transaction = $this->service->getById($id, $request->user()->id);
 
         if (!$transaction) {
             return response()->json([
@@ -188,12 +97,32 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        $transaction->delete();
+        $this->service->delete($transaction);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Transaksi berhasil dihapus.',
             'data' => null,
         ], 200);
+    }
+
+    public function quickStore(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'in:income,expense'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'wallet_id' => ['nullable', 'integer', 'exists:wallets,id'],
+            'date' => ['nullable', 'date', 'date_format:Y-m-d'],
+        ]);
+
+        $transaction = $this->service->quickCreate($request->user()->id, $validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Transaksi berhasil dibuat.',
+            'data' => new TransactionResource($transaction),
+        ], 201);
     }
 }

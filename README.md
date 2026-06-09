@@ -1,203 +1,162 @@
-# Finance API - Laravel REST API
+# FinanceApp
 
-REST API untuk aplikasi manajemen keuangan pribadi (self finance management) dengan fitur autentikasi, kategori, transaksi, dan dashboard.
+Aplikasi Manajemen Keuangan Pribadi berbasis Laravel 13 dengan Blade Frontend + API Backend.
 
-## Spesifikasi Teknis
+## Tech Stack
 
-- **Framework**: Laravel 13.x
-- **Database**: MySQL atau PostgreSQL
-- **Authentication**: Laravel Sanctum (Token-based)
-- **Response Format**: JSON standar
+- **Backend:** Laravel 13, Sanctum Auth, SQLite/MySQL
+- **Frontend:** Blade, Bootstrap 5, Chart.js, SweetAlert2, DataTables
+- **Mobile Sync:** REST API (consumed by Flutter Mobile App)
 
 ## Fitur
 
-### 1. Authentication
-- `POST /api/user` - Register user baru
-- `POST /api/user/login` - Login dan dapat token
-- `POST /api/user/logout` - Logout (hapus token)
-- `GET /api/user` - Get profil user
+### Fitur Wajib
+- Authentication (Login, Register, Logout, Profile)
+- Dashboard (Balance, Income/Expense, Chart, Recent Transactions)
+- Categories (CRUD + Search + Pagination)
+- Transactions (CRUD + Filter + Search + Pagination + Export CSV)
+- Reports (Monthly, Yearly, Category Charts, Export PDF/CSV)
 
-### 2. Categories (CRUD)
-- `GET /api/categories` - List semua kategori
-- `POST /api/categories` - Buat kategori baru
-- `PUT /api/categories/{id}` - Update kategori
-- `DELETE /api/categories/{id}` - Hapus kategori
+### Fitur Tambahan
+- Wallet Management (Cash, Bank, E-Wallet)
+- Budget Planning (Budget per Category + Progress)
+- Savings Goal (Target + Progress Tracking)
+- Financial Insight (Monthly Comparison + Auto Insights)
+- Quick Transaction (Dashboard)
+- Notification Center
+- Recurring Transactions (API)
+- Device Tokens (API)
 
-### 3. Transactions (CRUD dengan filter)
-- `GET /api/transactions` - List transaksi (optional: type, start_date, end_date)
-- `POST /api/transactions` - Buat transaksi baru
-- `PUT /api/transactions/{id}` - Update transaksi
-- `DELETE /api/transactions/{id}` - Hapus transaksi
+## Arsitektur
 
-### 4. Dashboard
-- `GET /api/dashboard/summary` - Ringkasan keuangan
-
-## Struktur Response
-
-```json
-{
-    "status": "success|error",
-    "message": "Pesan response",
-    "data": { ... }
-}
+```
+Controllers (Api/Web) → Services → Repositories → Models → Database
 ```
 
-## Setup Project
+- **Service Layer:** Business logic (App\Services)
+- **Repository Pattern:** Data access (App\Repositories)
+- **Form Request Validation:** Input validation (App\Http\Requests)
+- **Policy Authorization:** Owner-based access (App\Policies)
 
-### 1. Install Dependencies
+## Instalasi
+
+### Prasyarat
+- PHP 8.3+
+- Composer
+- MySQL / SQLite
+- Node.js & NPM (opsional - UI menggunakan CDN)
+
+### Langkah Instalasi
+
 ```bash
+# 1. Clone repo
+git clone <repo-url> finance-api
+cd finance-api
+
+# 2. Copy .env dan sesuaikan database
+cp .env.example .env
+# Edit .env: DB_CONNECTION, DB_DATABASE, etc.
+
+# 3. Install dependencies
 composer install
-```
 
-### 2. Install Sanctum
-```bash
-composer require laravel/sanctum
-php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
-```
-
-### 3. Setup Database
-Buat database baru di MySQL:
-```sql
-CREATE DATABASE finance_api;
-```
-
-Copy `.env.example` ke `.env` dan sesuaikan konfigurasi database:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=finance_api
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-### 4. Generate Key & Migrate
-```bash
+# 4. Generate app key
 php artisan key:generate
-php artisan migrate
-```
 
-### 5. Seed Database (Optional)
-```bash
-php artisan db:seed
-```
+# 5. Migrate & seed database
+php artisan migrate --seed
 
-### 6. Run Server
-```bash
+# 6. (Opsional) Install NPM dan build assets
+npm install
+npm run build
+
+# 7. Jalankan server
 php artisan serve
 ```
 
-API akan tersedia di `http://localhost:8000/api`
+### Login Test User
+- Email: `test@example.com`
+- Password: `password123`
 
-## Testing
+## API Endpoints
 
-### Test User (after seeding)
-- **Email**: test@example.com
-- **Password**: password123
+### Public
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/user | Register |
+| POST | /api/user/login | Login |
 
-### Contoh Request
+### Protected (Bearer Token)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/user | Profile |
+| POST | /api/user/logout | Logout |
+| PUT | /api/user/profile | Update Profile |
+| PUT | /api/user/password | Change Password |
+| GET/POST/PUT/DELETE | /api/categories | Categories CRUD |
+| GET/POST/PUT/DELETE | /api/transactions | Transactions CRUD |
+| POST | /api/transactions/quick | Quick Transaction |
+| GET | /api/dashboard/summary | Dashboard Summary |
+| GET/POST/PUT/DELETE | /api/goals | Goals CRUD |
+| POST | /api/goals/{id}/add-savings | Add Savings |
+| GET | /api/reports/charts | Chart Data |
+| GET | /api/reports/monthly | Monthly Report |
+| GET | /api/reports/export | Export Data (JSON) |
+| GET | /api/reports/export-pdf | Export PDF |
+| GET | /api/reports/export-csv | Export CSV |
+| GET/POST/PUT/DELETE | /api/wallets | Wallets CRUD |
+| GET/POST/PUT/DELETE | /api/budgets | Budgets CRUD |
+| GET | /api/notifications | List Notifications |
+| GET | /api/notifications/unread-count | Unread Count |
+| POST | /api/notifications/{id}/read | Mark Read |
+| POST | /api/notifications/read-all | Mark All Read |
+| POST | /api/device-tokens | Register Device |
+| GET | /api/insights/monthly-comparison | Monthly Comparison |
+| GET | /api/insights/auto-insights | Auto Insights |
+| GET/POST/PUT/DELETE | /api/recurring-transactions | Recurring CRUD |
 
-#### Register
-```bash
-curl -X POST http://localhost:8000/api/user \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"name":"John Doe","email":"john@example.com","password":"password123","password_confirmation":"password123"}'
+## Struktur Folder Penting
+
+```
+app/
+├── Http/
+│   ├── Controllers/       # API & Web controllers
+│   │   ├── Api/           # API controllers
+│   │   └── Web/           # Blade controllers  
+│   ├── Requests/          # Form validation
+│   │   ├── Api/           # API validation
+│   │   └── Web/           # Web validation
+│   ├── Resources/         # API resources
+│   └── Middleware/         # Custom middleware
+├── Models/                # Eloquent models
+├── Services/              # Business logic layer
+├── Repositories/          # Data access layer
+└── Policies/              # Authorization
+
+database/
+├── migrations/            # DB migrations
+├── factories/             # Model factories
+└── seeders/               # DB seeders
+
+resources/views/
+├── layouts/               # App layout + auth layout
+├── dashboard/             # Dashboard page
+├── transactions/          # Transaction pages
+├── categories/            # Category pages
+├── wallets/               # Wallet pages
+├── budgets/               # Budget pages
+├── goals/                 # Goal pages
+├── reports/               # Report pages
+├── insights/              # Insight pages
+├── notifications/         # Notification pages
+├── profile/               # Profile page
+└── auth/                  # Login/Register pages
 ```
 
-#### Login
-```bash
-curl -X POST http://localhost:8000/api/user/login \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-```
+## Warna Aplikasi
 
-#### Get Categories (dengan token)
-```bash
-curl -X GET http://localhost:8000/api/categories \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -H "Accept: application/json"
-```
-
-#### Create Transaction
-```bash
-curl -X POST http://localhost:8000/api/transactions \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"category_id":1,"type":"expense","amount":50000,"date":"2026-04-27","description":"Test transaksi"}'
-```
-
-#### Get Dashboard
-```bash
-curl -X GET http://localhost:8000/api/dashboard/summary \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -H "Accept: application/json"
-```
-
-## Endpoint Summary
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | /api/user | No | Register new user |
-| POST | /api/user/login | No | Login user |
-| POST | /api/user/logout | Yes | Logout user |
-| GET | /api/user | Yes | Get user profile |
-| GET | /api/categories | Yes | List categories |
-| POST | /api/categories | Yes | Create category |
-| PUT | /api/categories/{id} | Yes | Update category |
-| DELETE | /api/categories/{id} | Yes | Delete category |
-| GET | /api/transactions | Yes | List transactions |
-| POST | /api/transactions | Yes | Create transaction |
-| PUT | /api/transactions/{id} | Yes | Update transaction |
-| DELETE | /api/transactions/{id} | Yes | Delete transaction |
-| GET | /api/dashboard/summary | Yes | Dashboard summary |
-
-## Validasi
-
-- Email harus unique dan valid format
-- Password minimal 8 karakter
-- Amount harus integer positif
-- Date format YYYY-MM-DD
-- Type harus 'income' atau 'expense'
-- Category_id harus exist dan milik user yang login
-
-## Security
-
-- Password di-hash dengan bcrypt
-- Semua data di-scoped per user
-- Sanctum token-based authentication
-- CORS dikonfigurasi untuk Flutter app
-
-## License
-
-MIT
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Warna | Hex |
+|-------|-----|
+| Primary | #0F766E |
+| Secondary | #14B8A6 |
+| Accent | #22C55E |
